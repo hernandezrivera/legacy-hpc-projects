@@ -3,3 +3,4 @@ prev_versions/
 __pycache__/
 *.log
 .venv/
+.idea/

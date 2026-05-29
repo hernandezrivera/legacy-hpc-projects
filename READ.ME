@@ -74,21 +74,24 @@ playwright install
 
 ***
 
+## ✅ 3. First-time setup
+
+Before running the crawler for the first time, you must run:
+
+```
+bash
+git push --set-upstream origin main
+```
+
+***
+
 ## ✅ 3. Configure crawler output
 
-Make sure your crawler writes directly to the published folder:
 
-```
-python
+he crawler is already configured to write directly to `docs/projects/`.
 
-PROJECTS_DIR = os.path.join(
-    GITHUB_LOCAL_REPO,
-    "docs",
-    "projects"
-)
-```
+Only modify this if you change the project structure.
 
-👉 This ensures generated HTML is written into the live site.
 
 ***
 
@@ -96,7 +99,7 @@ PROJECTS_DIR = os.path.join(
 
 ```
 bash
-python html_crawler4.py
+python html_crawler.py
 ```
 
 This will generate files like:
@@ -148,6 +151,8 @@ GitHub Pages automatically publishes updates.
 * `index.html` must exist in `/docs`
 * Paths are case-sensitive
 * Only static files are supported (HTML, CSS, JS, images)
+* A `.nojekyll` file is included to ensure GitHub Pages does not ignore `_assets/` folders
+* The first push may take longer if many HTML files are generated
 
 ***
 

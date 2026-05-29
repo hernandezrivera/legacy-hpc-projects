@@ -1,9 +1,13 @@
 #TODO: Choose to host locally or github pages (or Azure?) -- CALCULATE SPACE -- ASK OPS -- UPDATE READ.ME FOR SETTING UP
 # #TODO: If files exist, ask for doing it again or not.
-#TODO: Evaluate how to display the disaggregated figures
-
+#TODO: Evaluate how to display the disaggregated
+#TODO: Check old projects that had a warning (1,174).
 #TODO: Potentially add a common header
 #TODO: Adapt style to mimic HumanitarianACtion
+#TODO: Starting year to mirate (2009? 2001?)
+#TODO: Include history projects from OPS (
+# Did we import long pieces of text? when migrated OPS projects to HPC -pre-2019-, we did fully or partially?) Probably, we didn't import it
+# we should know where the data is and how to get it. And estimate how much time would take to archive it. that can go into the backlog.
 
 import os
 import re
@@ -75,8 +79,6 @@ ASSETS_SUBDIRS = {
 }
 MANIFEST_PATH = os.path.join(ASSETS_DIR, "manifest_assets.json")
 
-
-
 # =========================
 # UTILS # helpers (hash, url, etc.)
 # =========================
@@ -87,22 +89,36 @@ def log(msg):
     logging.info(msg)
 
 
+def log_event(msg):
+    sys.stdout.write("\n" * 2)  # go below UI block
+    print(msg)
 
-def print_progress(processed, total, elapsed, eta, pid=None):
+
+
+SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+def print_progress(processed, total, elapsed, eta, pid=None, batch_info="", phase="Extracting"):
     pct = (processed / total) * 100 if total else 0
 
+    bar_len = 20
+    filled = int(bar_len * processed // total)
+    bar = "█" * filled + "░" * (bar_len - filled)
+
+    spinner = SPINNER[processed % len(SPINNER)]
     eta_str = "estimating..." if processed == 0 else format_seconds(eta)
 
     msg = (
-        f"\rProgress: {processed}/{total} "
-        f"({pct:.1f}%) | elapsed: {format_seconds(elapsed)} "
-        f"| ETA: {eta_str}"
+        f"\r{spinner} "
+        f"[{bar}] {pct:.1f}% | "   
+        f"Batch: {batch_info} | "  
+        f"{processed}/{total} | "
+        f"Last: {pid} | "     
+        f"Elapsed: {format_seconds(elapsed)} | "
+        f"ETA: {eta_str} | "
+        f"{phase}"
     )
 
-    if pid:
-        msg += f" | current: {pid}"
-
-    sys.stdout.write(msg)
+    sys.stdout.write(msg.ljust(140))
     sys.stdout.flush()
 
 
@@ -175,7 +191,10 @@ def git_commit_push(message="Update HPC project pages"):
         subprocess.run(
             ["git", "add", "docs"],
             cwd=GITHUB_LOCAL_REPO,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             check=True
+
         )
 
         # If nothing staged/changed, skip commit+push
@@ -192,16 +211,29 @@ def git_commit_push(message="Update HPC project pages"):
             return
 
         # commit may fail if no changes, so ignore error
-        subprocess.run(
+        result = subprocess.run(
             ["git", "commit", "-m", message],
             cwd=GITHUB_LOCAL_REPO,
+            # stdout=subprocess.DEVNULL,
+            # stderr=subprocess.PIPE,  # keep errors only
+            text=True
         )
 
-        subprocess.run(
+        # If nothing to commit → silently skip
+        if result.returncode != 0 and ( "nothing to commit" not in result.stderr.lower() or  "no changes added to commit" not in result.stderr.lower() ):
+
+            print(f"\n❌ Git commit error:\n{result.stderr}")
+
+        result = subprocess.run(
             ["git", "push"],
             cwd=GITHUB_LOCAL_REPO,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             check=True
         )
+
+        if result.returncode != 0:
+            print(f"\n❌ Git push error:\n{result.stderr}")
 
     except Exception as e:
         print(f"[warn] git push failed: {e}")
@@ -1014,8 +1046,8 @@ def process_project(pid, page, session, store: AssetStore):
 
         # --- 9. FINAL HTML --
         # Minify only in the production ready version for clarity
-        # final_html = minify_html(str(soup))
-        final_html = str(soup)
+        final_html = minify_html(str(soup))
+        # final_html = str(soup)
 
         # --- 10. SAVE ---
         save_html(pid, final_html)
@@ -1070,18 +1102,37 @@ def run(ids, session):
 
                 elapsed = time.time() - start_time
                 eta = (elapsed / i) * (total - i) if i > 0 else 0
-                print_progress(i, total, elapsed, eta, pid)
+
+                import math
+                total_batches = math.ceil(total / BATCH_SIZE)
+                current_batch = math.ceil(i / BATCH_SIZE)
+
+                batch_info = f"Batch {current_batch}/{total_batches}"
+
+                print_progress(i, total, elapsed, eta, pid, batch_info, phase="Extracting")
 
                 if len(store.manifest) > last_manifest_size:
                     save_manifest(store.manifest)
                     last_manifest_size = len(store.manifest)
 
                 if i > 0 and i % BATCH_SIZE == 0:
+                    batch_start = i - BATCH_SIZE + 1
+                    batch_end = i
+
+                    # ✅ Project IDs
+                    start_pid = ids[batch_start - 1]
+                    end_pid = ids[batch_end - 1]
+
+                    # ✅ Number of uploaded projects
+                    num_uploaded = batch_end - batch_start + 1
 
                     if AUTO_GIT:
-                        print("[git] committing batch...")
-                        git_commit_push(f"Batch update: {i} projects")
+                        print_progress(i, total, elapsed, eta, pid, batch_info, phase="Committing")
 
+                        git_commit_push(
+                            f"Batch update: projects {start_pid} to {end_pid}, "
+                            f"{num_uploaded} uploaded, from {batch_start} of {total}"
+                        )
                     time.sleep(COOLDOWN)
 
                 if DELAY:
@@ -1094,7 +1145,7 @@ def run(ids, session):
                     logging.error(traceback.format_exc())
 
             if AUTO_GIT:
-                git_commit_push("Final update")
+                git_commit_push(f"Final update: processed {total} projects")
 
         finally:
             ctx.close()
