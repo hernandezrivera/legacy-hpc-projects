@@ -12,6 +12,7 @@
   "https://api.hpc.tools/v2/icon/clusters_shelter_icon?format=svg": "../docs/_assets/img/06cdd1d699baf649e6f3510e9e73c308c0ce6db7a2e0a0df234aa5b3656a7fce.svg",
   "https://api.hpc.tools/v2/icon/clusters_water_sanitation_and_hygiene_icon?format=svg": "../docs/_assets/img/0412613dc9b25032a7ca8495cf9db0d44b58ec4d8d8a6f59fa486bcfab55414c.svg",
   "https://api.hpc.tools/v2/icon/disaster_earthquake_icon?format=svg": "../docs/_assets/img/90216dd197c3350e453b2fcec6f51a23b66b445c057e409ef6011e4d2d0c1c57.svg",
+  "https://api.hpc.tools/v2/icon/disaster_population_displacement_icon?format=svg": "../docs/_assets/img/5a2641a0574762d40b08c3a88e65f6e3be6b6a329df97797af4c28effc971f0c.svg",
   "https://api.hpc.tools/v2/icon/disaster_population_refugee_icon?format=svg": "_assets/img/7e568515ba9c8bb9db24e724268b129f7144837338745a47c488d9de5ad71eb8.svg",
   "https://api.hpc.tools/v2/icon/other_clusters_agriculture_icon?format=svg": "../docs/_assets/img/884cc319e6875beaa990e213ad9fa686bc2884e178e5122058728223ecba40e4.svg",
   "https://api.hpc.tools/v2/icon/other_clusters_coordination_icon?format=svg": "../docs/_assets/img/7c0d9cc6546a78f318fc1b7ec1fdb04d95b92ff8088923982f9b6af0b904c96d.svg",
