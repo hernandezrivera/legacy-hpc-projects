@@ -4,7 +4,7 @@
 #TODO: Check old projects that had a warning (1,174).
 #TODO: Potentially add a common header
 #TODO: Adapt style to mimic HumanitarianACtion
-#TODO: Starting year to mirate (2009? 2001?)
+#TODO: Starting year to mirate (2019 -- 2009? 2001?)
 #TODO: Include history projects from OPS (
 # Did we import long pieces of text? when migrated OPS projects to HPC -pre-2019-, we did fully or partially?) Probably, we didn't import it
 # we should know where the data is and how to get it. And estimate how much time would take to archive it. that can go into the backlog.
@@ -16,6 +16,7 @@ import json
 import time
 import hashlib
 import logging
+import math
 
 import requests
 import sys
@@ -43,7 +44,7 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # NEVER hardcode
 
 INPUT_CSV = "input_projects_db.csv"
 # Years to process (as strings because CSV values are strings)
-FILTER_YEARS = {"2025"}   # example: {"2023", "2024", "2025"}`
+FILTER_YEARS = {"2021"}   # example: {"2023", "2024", "2025"}`
 # If empty or None → process all
 # FILTER_YEARS = None
 
@@ -51,13 +52,14 @@ OUTPUT_DIR = "output"
 PUBLISH_DIR = "docs"
 
 
-DELAY = 0.0
-BATCH_SIZE = 30
+DELAY = 0
+BATCH_SIZE = 100
 COOLDOWN = 0
+MAX_WORKERS = 10
+RESET_INTERVAL = 200
 
 LIMIT = 500000
 OFFSET = 0
-MAX_WORKERS = 10
 SAVE_JSON = False
 URL_COLUMN_INDEX = 0
 DEBUG = False
@@ -94,10 +96,26 @@ def log_event(msg):
     print(msg)
 
 
+def project_already_exists(pid):
+
+    path = os.path.join(PROJECTS_DIR, f"{pid}.html")
+
+    if not os.path.exists(path):
+        return False
+
+    # ✅ basic integrity check
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+            return "<html" in content.lower()
+    except:
+        return False
+
+
 
 SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
-def print_progress(processed, total, elapsed, eta, pid=None, batch_info="", phase="Extracting"):
+def print_progress(processed, total, elapsed, eta, skipped, pid=None, batch_info="", phase="Extracting"):
     pct = (processed / total) * 100 if total else 0
 
     bar_len = 20
@@ -112,7 +130,8 @@ def print_progress(processed, total, elapsed, eta, pid=None, batch_info="", phas
         f"[{bar}] {pct:.1f}% | "   
         f"Batch: {batch_info} | "  
         f"{processed}/{total} | "
-        f"Last: {pid} | "     
+        f"Last: {pid} | "    
+        f"Skipped: {skipped} | "
         f"Elapsed: {format_seconds(elapsed)} | "
         f"ETA: {eta_str} | "
         f"{phase}"
@@ -133,7 +152,7 @@ def load_manifest():
             with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
-            return {}
+            return {} 
     return {}
 
 def is_hpc_tools_domain(url: str) -> bool:
@@ -188,55 +207,71 @@ import subprocess
 
 def git_commit_push(message="Update HPC project pages"):
     try:
+        # ✅ Stage ONLY docs (ignore everything else)
         subprocess.run(
             ["git", "add", "docs"],
             cwd=GITHUB_LOCAL_REPO,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=True
-
         )
 
-        # If nothing staged/changed, skip commit+push
-        status = subprocess.run(
-            ["git", "status", "--porcelain"],
+        # ✅ Check ONLY what is staged (not the whole repo)
+        staged = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
             cwd=GITHUB_LOCAL_REPO,
             capture_output=True,
             text=True,
-            check=True,
+            check=True
         ).stdout.strip()
 
-        if not status:
-            print("[git] no changes to commit")
+        # ✅ Nothing staged → skip silently
+        if not staged:
             return
 
-        # commit may fail if no changes, so ignore error
-        result = subprocess.run(
+        # ✅ Commit (silent unless error)
+        commit_result = subprocess.run(
             ["git", "commit", "-m", message],
-            cwd=GITHUB_LOCAL_REPO,
-            # stdout=subprocess.DEVNULL,
-            # stderr=subprocess.PIPE,  # keep errors only
-            text=True
-        )
-
-        # If nothing to commit → silently skip
-        if result.returncode != 0 and ( "nothing to commit" not in result.stderr.lower() or  "no changes added to commit" not in result.stderr.lower() ):
-
-            print(f"\n❌ Git commit error:\n{result.stderr}")
-
-        result = subprocess.run(
-            ["git", "push"],
             cwd=GITHUB_LOCAL_REPO,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
+            text=True
+        )
+
+        # ✅ update remote references (no merge, no rebase)
+        subprocess.run(
+            ["git", "fetch", "origin"],
+            cwd=GITHUB_LOCAL_REPO,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             check=True
         )
 
-        if result.returncode != 0:
-            print(f"\n❌ Git push error:\n{result.stderr}")
+        # ✅ If commit failed → show error (only real errors)
+        if commit_result.returncode != 0:
+            err = (commit_result.stderr or "").strip()
+            if err:
+                print(f"\n❌ Git commit error:\n{err}")
+            return
 
-    except Exception as e:
-        print(f"[warn] git push failed: {e}")
+        # ✅ Push (silent unless error)
+        push_result = subprocess.run(
+            ["git", "push", "--force-with-lease"],
+            cwd=GITHUB_LOCAL_REPO,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+
+        if push_result.returncode != 0:
+            err = (push_result.stderr or "").strip()
+            if err:
+                print(f"\n❌ Git push error:\n{err}")
+
+    except subprocess.CalledProcessError as e:
+        err = (e.stderr or str(e)).strip()
+        print(f"\n❌ Git command failed:\n{err}")
 
 
 class AssetStore:
@@ -910,6 +945,40 @@ def read_ids():
 
     return ids
 
+
+def cleanup(pages, ctx, browser):
+    print("\n🔧 Cleaning up...")
+
+    # ✅ Remove listeners safely
+    for page in pages:
+        try:
+            page.remove_all_listeners()
+        except:
+            pass
+
+    # ✅ Close pages first
+    for page in pages:
+        try:
+            page.close()
+        except:
+            pass
+
+    time.sleep(0.5)  # allow async tasks to finish
+
+    # ✅ Close context and browser FAST
+    try:
+        ctx.close()
+    except:
+        pass
+
+    try:
+        browser.close()
+    except:
+        pass
+
+    print("✅ Shutdown complete")
+
+
 # =========================
 # PIPELINE
 # =========================
@@ -953,8 +1022,6 @@ def clean_html(soup):
 
 def create_pages(context, n):
     return [context.new_page() for _ in range(n)]
-
-
 
 def save_html(pid, html_content):
     local_path = os.path.join(PROJECTS_DIR, f"{pid}.html")
@@ -1075,7 +1142,7 @@ def process_project(pid, page, session, store: AssetStore):
             f.write(r.content)
         log(f"[OK] JSON saved")
 
-def run(ids, session):
+def run(ids, session, skipped, total_full):
     ensure_asset_dirs()
     manifest = load_manifest() or {}
     store = AssetStore(manifest)
@@ -1095,45 +1162,57 @@ def run(ids, session):
             locale="en-US",
         )
         pages = create_pages(ctx, MAX_WORKERS)
+        total_batches = math.ceil(total / BATCH_SIZE) if total else 0
 
         try:
             last_manifest_size = 0
             for i, pid in enumerate(ids, start=1):
 
+                # Resetting the browser and pages to release memory.
+                if i % RESET_INTERVAL == 0:
+
+                    # ✅ close pages
+                    for p in pages:
+                        try:
+                            p.close()
+                        except:
+                            pass
+
+                    ctx.close()
+                    browser.close()
+
+                    browser = pw.chromium.launch(
+                        headless=True,
+                        args=["--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-dev-shm-usage"]
+                    )
+                    ctx = browser.new_context(
+                        user_agent=("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+                        viewport={"width": 1366, "height": 768},
+                        locale="en-US",
+                    )
+                    pages = create_pages(ctx, MAX_WORKERS)
+
                 elapsed = time.time() - start_time
                 eta = (elapsed / i) * (total - i) if i > 0 else 0
 
-                import math
-                total_batches = math.ceil(total / BATCH_SIZE)
-                current_batch = math.ceil(i / BATCH_SIZE)
-
+                current_batch = math.ceil(i / BATCH_SIZE) if BATCH_SIZE else 1
                 batch_info = f"Batch {current_batch}/{total_batches}"
 
-                print_progress(i, total, elapsed, eta, pid, batch_info, phase="Extracting")
+                print_progress(
+                    i,
+                    total,
+                    elapsed,
+                    eta,
+                    skipped=skipped,
+                    pid=pid,
+                    batch_info=batch_info,
+                    phase="Extracting"
+                )
 
                 if len(store.manifest) > last_manifest_size:
                     save_manifest(store.manifest)
                     last_manifest_size = len(store.manifest)
-
-                if i > 0 and i % BATCH_SIZE == 0:
-                    batch_start = i - BATCH_SIZE + 1
-                    batch_end = i
-
-                    # ✅ Project IDs
-                    start_pid = ids[batch_start - 1]
-                    end_pid = ids[batch_end - 1]
-
-                    # ✅ Number of uploaded projects
-                    num_uploaded = batch_end - batch_start + 1
-
-                    if AUTO_GIT:
-                        print_progress(i, total, elapsed, eta, pid, batch_info, phase="Committing")
-
-                        git_commit_push(
-                            f"Batch update: projects {start_pid} to {end_pid}, "
-                            f"{num_uploaded} uploaded, from {batch_start} of {total}"
-                        )
-                    time.sleep(COOLDOWN)
 
                 if DELAY:
                     time.sleep(DELAY)
@@ -1144,12 +1223,49 @@ def run(ids, session):
                 except Exception:
                     logging.error(traceback.format_exc())
 
-            if AUTO_GIT:
-                git_commit_push(f"Final update: processed {total} projects")
+                if i > 0 and i % BATCH_SIZE == 0:
+                    batch_start = i - BATCH_SIZE + 1
+                    batch_end = i
+
+                    if AUTO_GIT:
+                        print_progress(i, total, elapsed, eta, skipped, pid, batch_info, phase="Committing")
+
+                        year_label = ", ".join(sorted(FILTER_YEARS)) if FILTER_YEARS else "ALL"
+                        # batch slice (these are the actual IDs processed in this batch)
+                        batch_ids = ids[batch_start - 1: batch_end]
+                        # ✅ anchors (NOT implying order)
+                        first_pid = batch_ids[0] if batch_ids else None
+                        last_pid = batch_ids[-1] if batch_ids else None
+                        # ✅ sample (max 3)
+                        sample_ids = batch_ids[:3]
+                        sample_str = ", ".join(str(pid) for pid in sample_ids)
+
+                        git_commit_push(
+                            f"HPC archive | {year_label} | {len(batch_ids)} projects | "
+                            f"first: {first_pid} | last: {last_pid} | sample: {sample_str}"
+                        )
+
+                    if COOLDOWN:
+                        time.sleep(COOLDOWN)
+
+            if AUTO_GIT and total>0:
+                year_label = ", ".join(sorted(FILTER_YEARS)) if FILTER_YEARS else "ALL"
+                # batch slice (these are the actual IDs processed in this batch)
+                batch_ids = ids[batch_start - 1: batch_end]
+                # ✅ anchors (NOT implying order)
+                first_pid = batch_ids[0] if batch_ids else None
+                last_pid = batch_ids[-1] if batch_ids else None
+                # ✅ sample (max 3)
+                sample_ids = batch_ids[:3]
+                sample_str = ", ".join(str(pid) for pid in sample_ids)
+
+                git_commit_push(
+                    f"HPC archive | {year_label} | {len(batch_ids)} projects | "
+                    f"first: {first_pid} | last: {last_pid} | sample: {sample_str} | Final update"
+                )
 
         finally:
-            ctx.close()
-            browser.close()
+            cleanup(pages, ctx, browser)
 
 
 def publish_index():
@@ -1188,7 +1304,6 @@ def main():
     os.makedirs(ASSETS_DIR, exist_ok=True)
     os.makedirs(DEBUG_DIR, exist_ok=True)
 
-
     # ✅ Ensure directory exists BEFORE logging
     os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 
@@ -1200,18 +1315,28 @@ def main():
     )
 
     # ✅ Load IDs
-    ids = read_ids()
-    ids = ids[OFFSET: OFFSET + LIMIT]
+    ids_full = read_ids()
+
+    # Apply offset/limit first if you want the skip count to refer only to the selected slice
+    ids_slice = ids_full[OFFSET: OFFSET + LIMIT]
+
+    # Filter out already-existing files
+    ids = [pid for pid in ids_slice if not project_already_exists(pid)]
+
+    total_full = len(ids_slice)
+    skipped = total_full - len(ids)
 
     log(f"[filter] years: {FILTER_YEARS or 'ALL'}")
-    log(f"[input] deduped IDs: {len(ids)}")
+    log(f"[input] selected IDs: {total_full}")
+    log(f"[input] to process: {len(ids)}")
+    log(f"[input] skipped existing: {skipped}")
 
     # ✅ HTTP session (used for JSON API)
     publish_index()
     session = requests.Session()
 
     # ✅ Run pipeline
-    run(ids, session)
+    run(ids, session, skipped, total_full)
 
     log("[done] completed run.")
 
