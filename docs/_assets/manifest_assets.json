@@ -18,6 +18,7 @@
   "https://api.hpc.tools/v2/icon/disaster_population_displacement_icon?format=svg": "../docs/_assets/img/5a2641a0574762d40b08c3a88e65f6e3be6b6a329df97797af4c28effc971f0c.svg",
   "https://api.hpc.tools/v2/icon/disaster_population_internally_displaced_icon?format=svg": "../docs/_assets/img/8cc1bd89b4e903d7e60ca8d6e518c5f57ee45cb64f20df447a4d0f1c031c757d.svg",
   "https://api.hpc.tools/v2/icon/disaster_population_refugee_icon?format=svg": "../docs/_assets/img/7e568515ba9c8bb9db24e724268b129f7144837338745a47c488d9de5ad71eb8.svg",
+  "https://api.hpc.tools/v2/icon/food_NFI_bucket_icon?format=svg": "../docs/_assets/img/b2b5a35ffd6338d35bc17d4318ce9294364075735a87bbc67c3d94e4813a5a1f.svg",
   "https://api.hpc.tools/v2/icon/food_NFI_nonfood_item_icon?format=svg": "../docs/_assets/img/4a3e629cc31768699c400ed73e78dd1ee04ba44291c20df82293fa04f8de1798.svg",
   "https://api.hpc.tools/v2/icon/other_clusters_agriculture_icon?format=svg": "../docs/_assets/img/884cc319e6875beaa990e213ad9fa686bc2884e178e5122058728223ecba40e4.svg",
   "https://api.hpc.tools/v2/icon/other_clusters_coordination_icon?format=svg": "../docs/_assets/img/7c0d9cc6546a78f318fc1b7ec1fdb04d95b92ff8088923982f9b6af0b904c96d.svg",
