@@ -11,6 +11,7 @@
   "https://api.hpc.tools/v2/icon/clusters_recovery_icon?format=svg": "../docs/_assets/img/36a5eb524ae3880c039b370845ce59f112ce1f21304f9b5e7c019aa1734fc6bd.svg",
   "https://api.hpc.tools/v2/icon/clusters_shelter_icon?format=svg": "../docs/_assets/img/06cdd1d699baf649e6f3510e9e73c308c0ce6db7a2e0a0df234aa5b3656a7fce.svg",
   "https://api.hpc.tools/v2/icon/clusters_water_sanitation_and_hygiene_icon?format=svg": "../docs/_assets/img/0412613dc9b25032a7ca8495cf9db0d44b58ec4d8d8a6f59fa486bcfab55414c.svg",
+  "https://api.hpc.tools/v2/icon/covid_icon?format=svg": "../docs/_assets/img/f3a372dda3be19e6539cd59cdc696f8560cabe095593b27b5ca06e65a329915f.svg",
   "https://api.hpc.tools/v2/icon/disaster_earthquake_icon?format=svg": "../docs/_assets/img/90216dd197c3350e453b2fcec6f51a23b66b445c057e409ef6011e4d2d0c1c57.svg",
   "https://api.hpc.tools/v2/icon/disaster_fire_icon?format=svg": "../docs/_assets/img/a24451a2cd35517e5e419beccc02255e4227261f5b28fe3bba696b9afbbbece2.svg",
   "https://api.hpc.tools/v2/icon/disaster_humanitarian_access_icon?format=svg": "../docs/_assets/img/30904d10ba9a3cc87b350db75edf349e53020d8fa2ffa49f2015bf610fc21532.svg",
