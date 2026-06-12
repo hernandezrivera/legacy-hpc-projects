@@ -11,11 +11,11 @@ This repository contains:
 
 # 🌐 Public website
 
-👉 https://UN-OCHA.github.io/legacy-hpc-projects/
+👉 https://un-ocha.github.io/legacy-hpc-projects/
 
 Example:
 
-👉 https://UN-OCHA.github.io/legacy-hpc-projects/projects/229791.html
+👉 https://un-ocha.github.io/legacy-hpc-projects/projects/229791.html
 
 ---
 
@@ -31,7 +31,7 @@ GitHub Pages serves content from the repository automatically after each push.
 
 ---
 
-# 📁 Repository structure
+# 📁 Output structure
 
 legacy-hpc-projects/
 
@@ -40,10 +40,11 @@ legacy-hpc-projects/
 │   ├── projects/
 │   └── _assets/
 │
-├── output/                    ← local temporary output (NOT required)
+├── output/                    ← local temporary output (NOT in repository)
 │   ├── json/
 │   ├── screenshots/
-│   └── debug/
+│   ├── debug/
+│   └── crawler.log
 │
 ├── html_crawler.py            ← ✅ MAIN crawler
 ├── requirements.txt
@@ -87,11 +88,8 @@ git push --set-upstream origin main
 
 ## ✅ 3. Configure crawler output
 
-
-he crawler is already configured to write directly to `docs/projects/`.
-
+The crawler is already configured to write directly to `docs/projects/`.
 Only modify this if you change the project structure.
-
 
 ***
 

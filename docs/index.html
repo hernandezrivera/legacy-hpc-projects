@@ -1,9 +1,123 @@
 <!doctype html>
 <html>
-<head><title>HPC Projects</title></head>
+<head>
+  <meta charset="utf-8">
+  <title>HPC Projects Archive</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      max-width: 800px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    input {
+      padding: 8px;
+      width: 260px;
+      font-size: 14px;
+    }
+    button {
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .error {
+      color: red;
+      margin-top: 8px;
+    }
+    .section {
+      margin-top: 30px;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 4px;
+    }
+  </style>
+</head>
+
 <body>
+
 <h1>HPC Projects Archive</h1>
-<ul>
-</ul>
+
+<p>
+Static archive of HPC project pages (2019–2025).
+</p>
+
+<p>
+Total: ~50,000 projects
+</p>
+
+<div class="section">
+  <h2>Search by Project ID</h2>
+
+  <input
+    type="text"
+    id="projectId"
+    placeholder="Enter project ID (e.g. 229791)"
+  >
+
+  <button onclick="openProject()">Open</button>
+
+  <p class="error" id="error"></p>
+</div>
+
+<div class="section">
+  <h2>How to access a project</h2>
+
+  <p>Use the following format:</p>
+
+  <code>
+    /projects/{ID}.html
+  </code>
+
+  <p>Example:</p>
+
+  <code>
+    projects/229791.html
+  </code>
+</div>
+
+<div class="section">
+  <h2>Sample Projects</h2>
+  <ul>
+    <li><a href="projects/229791.html">Project 229791</a></li>
+    <li><a href="projects/229790.html">Project 229790</a></li>
+    <li><a href="projects/229789.html">Project 229789</a></li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>About</h2>
+  <p>
+    This archive preserves HPC project pages for reference and offline access.
+  </p>
+</div>
+
+<script>
+function openProject() {
+    const input = document.getElementById("projectId");
+    const error = document.getElementById("error");
+
+    const id = input.value.trim().replace(/[^0-9]/g, "");
+
+    error.textContent = "";
+
+    if (!id) {
+        error.textContent = "Please enter a valid numeric project ID.";
+        return;
+    }
+
+    window.location.href = "projects/" + id + ".html";
+}
+
+// ✅ Allow Enter key
+document.getElementById("projectId").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        openProject();
+    }
+});
+</script>
+
 </body>
 </html>
