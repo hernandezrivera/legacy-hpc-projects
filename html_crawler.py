@@ -1,3 +1,5 @@
+
+
 #TODO: Choose to host locally or github pages (or Azure?) -- CALCULATE SPACE -- ASK OPS -- UPDATE READ.ME FOR SETTING UP
 # #TODO: If files exist, ask for doing it again or not.
 #TODO: Evaluate how to display the disaggregated
@@ -44,7 +46,7 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # NEVER hardcode
 
 INPUT_CSV = "input_projects_db.csv"
 # Years to process (as strings because CSV values are strings)
-FILTER_YEARS = {"2021"}   # example: {"2023", "2024", "2025"}`
+FILTER_YEARS = {"2019", "2020", "2021", "2022", "2023", "2024", "2025"}   # example: {"2023", "2024", "2025"}`
 # If empty or None → process all
 # FILTER_YEARS = None
 
